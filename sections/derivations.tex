@@ -6,9 +6,7 @@
   \item $\mathcal{I}$ denotes an intertial frame, with its $z$ axis pointing in the direction against gravity.
   \item The position vector in frame $\mathcal{A}$ to a point $Q$ relative to the frame origin is denoted as ${}^\mathcal{A}\mathbf{p}_{Q}$.
   \item $\rotmat{A}{B}$ denotes the rotation matrix from frame $\mathcal{B}$ to frame $\mathcal{A}$. This is such that ${}^\mathcal{A}\mathbf{p}=\rotmat{A}{B}{}^\mathcal{B}\mathbf{p}$.
-  \item Let $S(\mathbf{x}) \in \mathbb{R}^{3\times 3}$ be the skew-symmetric matrix such that $S(\mathbf{x})\mathbf{y} = \mathbf{x} \times \mathbf{y}$, where $\times$ is the cross product operator in $\mathbb{R}^3$.
-  %%TODO: Not sure to include the below, worth keeping for now?
-  \item The Jacobian of a function $f:\mathbb{R}^n \to \mathbb{R}^m$ is denoted as $\mathbf{J}_f(\mathbf{x})$, and is defined as the matrix of partial derivatives of $f$ with respect to $\mathbf{x}$.
+  \item Let $[\mathbf{x}]_\times \in \mathbb{R}^{3\times 3}$ be the skew-symmetric matrix such that $[\mathbf{x}]_\times\mathbf{y} = \mathbf{x} \times \mathbf{y}$, where $\times$ is the cross product operator in $\mathbb{R}^3$.
 \end{itemize}
 
 
@@ -98,6 +96,52 @@ Simiarlly, for the passive wheels on the car (i.e. front wheels for RWD), the dy
 
 The full state update blends the wheel rotation dynamics via a motor mask, such that $\dot{\omega}_w = \texttt{mask} \cdot \dot{\omega}_\mathrm{drive} + (1- \texttt{mask}) \cdot \dot{\omega}_\mathrm{passive}$.
 
-All combined together, the system of equations that evolve our state \textit{cannot} be formed into a linear state-space model such as $A\mathbf{x} + B\mathbf{u}$, due to the nonlinearities in the slip model and the rotation dynamics. However, the system can be linearized around a nominal trajectory, which is what is done in the next section.
+All combined together, the system of equations that evolve our state \textit{cannot} be formed into a linear state-space model such as $\dot{\mathbf{x}}=A\mathbf{x} + B\mathbf{u}$, due to the nonlinearities in the slip model and the rotation dynamics. However, the system can be linearized around a nominal trajectory, which is what is done in the next section.
 
 \section{Extended Kalman Filter Formulation}
+
+\subsection{Error State Formulation}
+While most of the properties of the state $\mathbf{x}$ can be updated via the form $\mathbf{x} \leftarrow \mathbf{x} + K \nu$, we cannot do the same for the orientation $R$, since it evolves on the manifold $SO(3)$. If we ran a standard EKF with a quaternion directly in the state vector, the additive update would push $q$ off of the unit sphere required to properly represent rotations.
+
+%TODO: add reference for error state EKF,
+In order to solve this problem, this work formulates a filter in \textbf{error state}. This means that instead of tracking full $SO(3)$, we instead formulate the error orientation as $\delta \boldsymbol{\theta} \in \mathbb{R}^3$, which lives in the tangent space $\mathfrak{so}(3) \cong \mathbb{R}^3$. Doing so allows us to implement a standard state update into the error state EKF, whose state is defined as:  
+
+$$
+\mathbf{\delta x} =
+\begin{bmatrix}
+  \delta \mathbf{p} \in \mathbb{R}^3 \\
+  \delta \boldsymbol{\theta} \in \mathbb{R}^3 \\
+  \delta \mathbf{v} \in \mathbb{R}^3 \\
+  \delta {}^\mathcal{B}\boldsymbol{\omega} \in \mathbb{R}^3 \\
+  \delta \boldsymbol{\omega}_w \in \mathbb{R}^4
+\end{bmatrix}
+$$
+where all updates for non-orientation states are standard, except for $\delta \boldsymbol{\theta}$, which is used to update the orientation as follows:
+
+\begin{equation}
+  \rotmat{B}{I}+ \leftarrow \rotmat{B}{I} \cdot \exp\left([\delta \boldsymbol{\theta}]_\times\right)
+\end{equation}
+
+\subsection{Filter Prediction}
+
+As the components of the system are nonlinear, as stated before we do not have a standard Kalman filter predict step; rather, we propagate the nominal state $\hbf{x}_{k+1|k}$ as:
+
+\begin{equation}
+  \hbf{x}_{k+1|k} = f(\hbf{x}_{k|k}, \mathbf{u}_k)
+\end{equation}
+
+where $f$ is the integration step of the \mintinline{python}{CarModel} class, implemented in the library. Similarly for the covariance, we do not have a standard $P_{k+1|k} = F P_{k|k} F^T + Q$ update, but rather we linearize the dynamics around the nominal trajectory to get the Jacobian for the error dynamics, as:
+
+\begin{equation}
+  F_k = \frac{\partial f}{\partial \delta \mathbf{x}} \biggr|_{\hbf{x}_{k|k}, \mathbf{u}_k}
+\end{equation}
+
+And this then feeds into the covariance propagation as:
+
+\begin{equation}
+  P_{k+1|k} = F_k P_{k|k} F_k^T + Q
+\end{equation}
+
+As $\delta \mathbf{x}$ is reset to zero after each error injection, the prediction error state mean will \textit{always be zero}, as the predict step will only propagate covariance.
+
+\subsection{Filter Update}
