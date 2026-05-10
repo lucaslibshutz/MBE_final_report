@@ -1,0 +1,11 @@
+\section{Goal}
+
+One of the main motivations for this project was to create a base on which the team could test and run an autonomous car in a low stakes environment, and use that to tune the kinematic parameters and the dynamic assumptions for the larger, more complex vehicle that would be tested afterwards. Because of the complex nature of the dynamics of the larger car, some of the main aspects of the system that were modeled included:
+
+\begin{itemize}
+  \item Contact dynamics in $z$ of the tires and the ground
+  \item Orientation and tilt of the vehicle in roll, pitch, \textit{and} yaw
+  \item Tire slip parameters in both lateral and longitudinal directions
+\end{itemize}
+
+To do the last part is especially important for a larger car in a variable driving environment, where variable amounts of tire slip can drastically impact the localization accuracy of a filter, and contribute to large amounts of uncertainty.
