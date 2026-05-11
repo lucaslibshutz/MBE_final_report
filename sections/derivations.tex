@@ -136,7 +136,8 @@ where $f$ is the integration step of the \mintinline{python}{CarModel} class, im
   F_k = \frac{\partial f}{\partial \delta \mathbf{x}} \biggr|_{\hbf{x}_{k|k}, \mathbf{u}_k}
 \end{equation}
 
-And this then feeds into the covariance propagation as:
+%TODO: Add docs/reference on autodiff for Jacobians in JAX
+This Jacobian is calculated via the automatic diffentation feature in \mintinline{python}{JAX}. All classes are formulated as \textit{pytrees}, which allow full XLA compilation of the program as a graph, and allow for efficient Jacobian calculation in both forward and reverse mode. And this then feeds into the covariance propagation as:
 
 \begin{equation}
   P_{k+1|k} = F_k P_{k|k} F_k^T + Q
@@ -144,4 +145,42 @@ And this then feeds into the covariance propagation as:
 
 As $\delta \mathbf{x}$ is reset to zero after each error injection, the prediction error state mean will \textit{always be zero}, as the predict step will only propagate covariance.
 
-\subsection{Filter Update}
+\subsection{Filter Update and Sensor Models}
+
+We define the innovation in the filter $\boldsymbol{\nu} = \mathbf{z} - h(\hbf{x})$, with the measurement Jacobian of a sensor model $h$ defined as:
+
+\begin{equation}
+  H_k = \frac{\partial h}{\partial \delta \mathbf{x}} \biggr|_{\hbf{x}_{k+1|k}}
+\end{equation}
+
+Just as before, the Jacobian $H_k$ at timestep $k$ is calculated via \mintinline{python}{JAX} automatic differentiation. With the above, we then use this for three different sensors and their respective measurement models: 
+\begin{enumerate}
+  \item \textbf{GPS}: The GPS sensor model is defined as a simple position measurement in the inertial frame, with the measurement model defined as:
+    \begin{equation}
+      h_\mathrm{GPS}(\mathbf{x}) = {}^\mathcal{I}\mathbf{p}_G \in \mathbb{R}^3
+    \end{equation}
+  \item \textbf{IMU}: The IMU sensor model is defined as the standard accelerometer and gyroscope model, which is used to measure (1) the angular velocity in $x$, $y$, and $z$, and is used to validate the acceleration against gravity ${}^\mathcal{I} \mathbf{a}_G$. This means that we have two measurement models from the IMU, formulated as:
+    \begin{equation}
+      \begin{gathered}
+        h_\mathrm{gyro}(\mathbf{x}) = {}^\mathcal{B}\boldsymbol{\omega} \in \mathbb{R}^3\\
+        h_\mathrm{acc}(\mathbf{x}) = \rotmat{B}{I}^\top ({}^\mathcal{I} \mathbf{a}_G - \mathbf{g}) \in \mathbb{R}^3
+      \end{gathered}
+    \end{equation}
+  \item \textbf{Wheel Encoders}: The wheel encoders are used to measure the angular velocity of each wheel, which is then used to validate the slip dynamics in the model. Due to current inconsistencies with the front wheel slip dynamics, we only use the rear wheel encoder measurements for the update step, which is formulated as:
+    \begin{equation}
+      h_\mathrm{wheels}(\mathbf{x}) = \boldsymbol{\omega}_{w(\mathrm{rear})}\in \mathbb{R}^2
+    \end{equation}
+\end{enumerate}
+
+From all of these sensors, the update step via the innovation $\boldsymbol{\nu}=\mathbf{z}_k-h(\hbf{x})$ and observation Jacobian $H_k$ for each measurement is then calculated via the following steps:
+
+\begin{enumerate}
+  \item Define the innovation covariance: 
+    \begin{equation}
+      S_k = H_k P_{k+1|k} H_k^T + R
+    \end{equation}
+  \item Define the Kalman gain:
+    \begin{equation}
+      K_k = P_{k+1|k} H_k^T S_k^{-1}
+    \end{equation}
+\end{enumerate}
