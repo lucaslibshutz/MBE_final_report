@@ -98,6 +98,8 @@ The full state update blends the wheel rotation dynamics via a motor mask, such 
 
 All combined together, the system of equations that evolve our state \textit{cannot} be formed into a linear state-space model such as $\dot{\mathbf{x}}=A\mathbf{x} + B\mathbf{u}$, due to the nonlinearities in the slip model and the rotation dynamics. However, the system can be linearized around a nominal trajectory, which is what is done in the next section.
 
+%TODO: add integration methods for each state and how they are updated via semi-implicit Euler, (also fix the wheel update in the actual code!!)
+
 \section{Extended Kalman Filter Formulation}
 
 \subsection{Error State Formulation}
@@ -137,7 +139,7 @@ where $f$ is the integration step of the \mintinline{python}{CarModel} class, im
 \end{equation}
 
 %TODO: Add docs/reference on autodiff for Jacobians in JAX
-This Jacobian is calculated via the automatic diffentation feature in \mintinline{python}{JAX}. All classes are formulated as \textit{pytrees}, which allow full XLA compilation of the program as a graph, and allow for efficient Jacobian calculation in both forward and reverse mode. And this then feeds into the covariance propagation as:
+This Jacobian is calculated via the automatic diffentation feature in JAX. All classes are formulated as \textit{pytrees}, which allow full XLA compilation of the program as a graph, and allow for efficient Jacobian calculation in both forward and reverse mode. This then feeds into the covariance propagation as:
 
 \begin{equation}
   P_{k+1|k} = F_k P_{k|k} F_k^T + Q
@@ -153,7 +155,8 @@ We define the innovation in the filter $\boldsymbol{\nu} = \mathbf{z} - h(\hbf{x
   H_k = \frac{\partial h}{\partial \delta \mathbf{x}} \biggr|_{\hbf{x}_{k+1|k}}
 \end{equation}
 
-Just as before, the Jacobian $H_k$ at timestep $k$ is calculated via \mintinline{python}{JAX} automatic differentiation. With the above, we then use this for three different sensors and their respective measurement models: 
+Just as before, the Jacobian $H_k$ at timestep $k$ is calculated via JAX automatic differentiation. With the above, we then use this for three different sensors and their respective measurement models:
+
 \begin{enumerate}
   \item \textbf{GPS}: The GPS sensor model is defined as a simple position measurement in the inertial frame, with the measurement model defined as:
     \begin{equation}
@@ -172,10 +175,10 @@ Just as before, the Jacobian $H_k$ at timestep $k$ is calculated via \mintinline
     \end{equation}
 \end{enumerate}
 
-From all of these sensors, the update step via the innovation $\boldsymbol{\nu}=\mathbf{z}_k-h(\hbf{x})$ and observation Jacobian $H_k$ for each measurement is then calculated via the following steps:
+From the GPS, wheel encoders, and IMU, the update step via the innovation $\boldsymbol{\nu}=\mathbf{z}-h(\hbf{x})$ and observation Jacobian $H_k$ batched across all measurements can be formulated as follows:
 
 \begin{enumerate}
-  \item Define the innovation covariance: 
+  \item Define the innovation covariance:
     \begin{equation}
       S_k = H_k P_{k+1|k} H_k^T + R
     \end{equation}
@@ -183,4 +186,15 @@ From all of these sensors, the update step via the innovation $\boldsymbol{\nu}=
     \begin{equation}
       K_k = P_{k+1|k} H_k^T S_k^{-1}
     \end{equation}
+  %TODO: cite Joseph form from paper
+  \item Update the error state mean and covariance, using the \textit{Joseph form}, which guarantees the covariance to be positive definite, even in the presence of numerical instability:
+    \begin{equation}
+      \begin{gathered}
+        \delta \mathbf{x}_{k+1|k+1} = K_k \boldsymbol{\nu} \\
+        P_{k+1|k+1} = (I - K_k H_k) P_{k+1|k} (I - K_k H_k)^\top \\
+        + K_k R K_k^\top
+      \end{gathered}
+    \end{equation}
 \end{enumerate}
+
+Finally, after each update step, we reset $\delta \hbf{x}\leftarrow \mathbf{0}$, such that we can keep the error state as a mathematical formality rather than another possibility for numerical instability.
