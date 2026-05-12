@@ -1,0 +1,8 @@
+\section{Results}
+
+To evaluate the model and the filter, we ran two separate trajectories to understand the validity of the dynamics and the filter:
+
+\begin{enumerate}
+  \item \textbf{A straight line with left turn}, to ensure that the filter does not diverge when the system is not fully observable. In this case, the system is not fully observable because the steering angle is zero for the straight line portion of the trajectory, so the filter cannot estimate the steering angle during that time. However, once the turn begins, the filter should be able to estimate the steering angle and converge to the true state.
+  \item \textbf{A sinusoidal trajectory}, to ensure that the filter can track a more complex trajectory and that the model is accurate enough to capture the dynamics of the system. In this case, the system is fully observable because the steering angle is non-zero throughout the trajectory, so the filter should be able to estimate the state accurately and converge to the true state.
+\end{enumerate}
