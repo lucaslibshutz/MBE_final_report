@@ -1,8 +1,64 @@
 \section{Results}
 
+
 To evaluate the model and the filter, we ran two separate trajectories to understand the validity of the dynamics and the filter:
 
 \begin{enumerate}
   \item \textbf{A straight line with left turn}, to ensure that the filter does not diverge when the system is not fully observable. In this case, the system is not fully observable because the steering angle is zero for the straight line portion of the trajectory, so the filter cannot estimate the steering angle during that time. However, once the turn begins, the filter should be able to estimate the steering angle and converge to the true state.
   \item \textbf{A sinusoidal trajectory}, to ensure that the filter can track a more complex trajectory and that the model is accurate enough to capture the dynamics of the system. In this case, the system is fully observable because the steering angle is non-zero throughout the trajectory, so the filter should be able to estimate the state accurately and converge to the true state.
 \end{enumerate}
+
+These tests were done first for a small RC mini car, assuming with the following initial parameters:
+\begin{itemize}
+  \item Chassis dimensions of $26 \times 16 \times 6$ cm, and a mass of \\ 1.5 kg.
+  \item A ground fricton coefficient of $\mu=0.9$
+  \item Contact spring parameters $k_n=2000$, $c_n=50$
+  \item Wheels with radius 3 cm, and mass 50 g each.
+\end{itemize}
+
+The contact spring parameters were chosen to result in a damping ratio as the following:
+$$
+\zeta = \frac{c_n}{2 \sqrt{k_n \cdot m_\mathrm{wheel(point)}}} = 1.00416
+$$
+
+The reason that we use $m_\mathrm{wheel(point)}$ here instead of the wheel mass itself is because of the lack of suspension within this model: the dynamics formulated here treat the wheel as a rigid transform between the center of mass and the wheel axis of rotation, with no translational degree of freedom.
+
+Along with the kinematic parameters mentioned above, both tests were run with the following sensor $\sigma$ values, to simulate an inherently noisy system to evaluate how well the dynamics would drown out sensor noise:
+\begin{itemize}
+  \item GPS: $\sigma =$ 1.5 m
+  \item Gyro: $\sigma = $ 0.01 rad/s
+  \item Accelerometer: $\sigma = $ 0.1 m/s\textsuperscript{2}
+  \item Wheels: $\sigma = $ 0.01 rad/s
+\end{itemize}
+
+\subsection{Straight \& Left Turn}
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{\linewidth}{!}{\input{figures/straight/position.pgf}}
+  \caption{Position data and $2\sigma$ errors for first test case. Maximum error in $x$ and $y$ was 4 and 6 cm, respectively.}
+\end{figure}
+
+\clearpage
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{\linewidth}{!}{\input{figures/straight/rpy.pgf}}
+  \caption{Orientation data and $2\sigma$ errors for first test case. Maximum error in yaw is $\approx 1\degree$, while the other angles had error bounds on the order of $0.1 \degree$ respectively.}
+\end{figure}
+
+\subsection{Sinusoidal Trajectory}
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{\linewidth}{!}{\input{figures/sinusoidal/position.pgf}}
+  \caption{Position data and $2\sigma$ errors for second test case. Maximum error in $x$ and $y$ was 4 and 6 cm, respectively.}
+\end{figure}
+
+\clearpage
+
+\begin{figure}[b!]
+  \centering
+  \resizebox{\linewidth}{!}{\input{figures/sinusoidal/rpy.pgf}}
+  \caption{Orientation data and $2\sigma$ errors for second test case. Maximum error in yaw is $\approx 1\degree$, while the other angles had error bounds on the order of $0.1 \degree$ respectively..}
+\end{figure}
