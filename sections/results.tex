@@ -63,15 +63,18 @@ Along with the kinematic parameters mentioned above, both tests were run with th
 
 \newpage
 
-\subsection{Numerical Results}
-\bigskip
-\begin{center}
+\bigskip\bigskip
+
+\begin{table}[htbp]
+  \centering
+  \renewcommand{\arraystretch}{1.5}
+  \caption{EKF Errors for Test Cases}
   \resizebox{\linewidth}{!}{
     \begin{tabular}{*{10}{|c}|}
       \hline
-      \textbf{Test} & \multicolumn{3}{|c|}{\textbf{Position} (m)} & \multicolumn{3}{|c|}{\textbf{Velocity} (m/s)} & \multicolumn{3}{|c|}{\textbf{Yaw} (rad)} \\
+      \underline{\textbf{Parameter}} & \multicolumn{3}{c|}{\textbf{Position} (m)} & \multicolumn{3}{c|}{\textbf{Velocity} (m/s)} & \multicolumn{3}{c|}{\textbf{Yaw} (rad)} \\
       \hline
-       & RMSE & Max & Min & RMSE & Max & Min & RMSE & Max & Min \\
+      \underline{\textbf{Test}} & RMSE & Max & Min & RMSE & Max & Min & RMSE & Max & Min \\
       \hline
       \textit{Straight \& Left Turn} & 0.007 & 0.009 & 0.001 & 0.035 & 0.34 & 0.001 & 0.064 & 0.064 & 0.064 \\
       \hline
@@ -80,4 +83,4 @@ Along with the kinematic parameters mentioned above, both tests were run with th
 
     \end{tabular}
   }
-\end{center}
+\end{table}
