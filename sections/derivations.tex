@@ -85,13 +85,13 @@ From this, both $f_{x,i}^\star$ and $f_{y,i}^\star$ are scaled by the above quan
 The one other aspect of the dynamics that remains is the spin dynamics of each wheel specifically, which we define as a damped rotating disk as follows:
 
 \begin{equation}
-  I_w \dot{\omega}_{w,i} = \tau_{\mathrm{cmd},i} - r f_{x,i} - b_w \omega_{w,i}
+  I_w \dot{\omega}_{w,i} = \tau_{\mathrm{cmd},i} - r f_{x,i} - b_w \omega_{w,i} \label{eq:back_wheels}
 \end{equation}
 
 Simiarlly, for the passive wheels on the car (i.e. front wheels for RWD), the dynamics are simplified to relax toward the standard kinematic rolling constraint:
 
 \begin{equation}
-  \dot{\omega}_{w,i} = \frac{1}{\tau_f}\left(\frac{v_{t,i}}{r}-\omega_{w,i}\right)
+  \dot{\omega}_{w,i} = \frac{1}{\tau_f}\left(\frac{v_{t,i}}{r}-\omega_{w,i}\right) \label{eq:front_wheels}
 \end{equation}
 
 The full state update blends the wheel rotation dynamics via a motor mask, such that $\dot{\omega}_w = \texttt{mask} \cdot \dot{\omega}_\mathrm{drive} + (1- \texttt{mask}) \cdot \dot{\omega}_\mathrm{passive}$.
